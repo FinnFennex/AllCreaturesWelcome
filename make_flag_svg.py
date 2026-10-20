@@ -150,11 +150,12 @@ for suffix, colors in PALETTES.items():
             fh.write(build(rows, colors))
         print("wrote", out)
 
-# pride version with the hand-drawn pawprint (traced by trace_pawprint.py)
-paw_file = os.path.join(OUT_DIR, "pawprint.svg")
-if os.path.exists(paw_file):
-    paw = re.search(r"<path[^>]*/>", open(paw_file).read()).group(0)
-    out = os.path.join(OUT_DIR, "all-creatures-3-pride-paw.svg")
-    with open(out, "w") as fh:
-        fh.write(build(VARIANTS["all-creatures-3"], PRIDE_COLORS, paw))
-    print("wrote", out)
+# pride versions with the hand-drawn pawprint (traced by trace_pawprint.py)
+for paw_name, suffix in [("pawprint.svg", "-paw"), ("pawprint-solid.svg", "-paw-solid")]:
+    paw_file = os.path.join(OUT_DIR, paw_name)
+    if os.path.exists(paw_file):
+        paw = re.search(r"<path[^>]*/>", open(paw_file).read()).group(0)
+        out = os.path.join(OUT_DIR, "all-creatures-3-pride" + suffix + ".svg")
+        with open(out, "w") as fh:
+            fh.write(build(VARIANTS["all-creatures-3"], PRIDE_COLORS, paw))
+        print("wrote", out)
