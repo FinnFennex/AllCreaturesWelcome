@@ -6,14 +6,17 @@ and idealised to a regular grid. Text is Archivo Regular, converted to outlines.
 usage: python3 make_flag_svg.py <Archivo-Regular.ttf> <out_dir>
 needs: fonttools, uharfbuzz
 """
+import math
 import os
 import re
 import sys
 
 import uharfbuzz as hb
+from fontTools.misc.transform import Transform
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
+from fontTools.svgLib.path import parse_path
 from fontTools.ttLib import TTFont
 
 FONT, OUT_DIR = sys.argv[1], sys.argv[2]
@@ -43,7 +46,7 @@ PRIDE_COLORS = {
     "blue":   "#24408e",
     "pink":   "#732982",
 }
-PALETTES = {"": COLORS, "-pride": PRIDE_COLORS}
+PALETTES = {"-pride": PRIDE_COLORS}
 ROW_COLORS = ["red", "orange", "yellow", "green", "blue", "pink"]
 
 # placement measured on the original flag: ink left, ink right, block start
@@ -55,14 +58,21 @@ MEASURED = {
 DEFAULT_LEFT = 12
 DEFAULT_TRACKING = 5.1  # font units, as fitted for CREATURES
 DEFAULT_BLOCK_GAP = 17
+# text drawn in dark over a full stripe instead of before a block, with its rotation in degrees
+# ("@file.svg" = hand-drawn shape traced by trace_colon3.py, thickened to the font's stem width)
+TILTED = {"@colon3-fat.svg": -10}
+TILT_PAD = 8            # keep the tilted text this far inside the stripe
+TILT_OPACITY = 0.86     # 14% transparent
+PATH_NTOS = lambda v: f"{v:.1f}".rstrip("0").rstrip(".")
+MATRIX_NTOS = lambda v: f"{v:.5f}".rstrip("0").rstrip(".")
 
 # variant name -> text per row (rows without text are full stripes)
 VARIANTS = {
     "all-creatures-welcome":   {0: "ALL", 1: "CREATURES", 2: "WELCOME"},
     "creatures":               {1: "CREATURES"},
     "creatures-3":             {1: "CREATURES :3"},
-    "creatures-3-yellow":      {1: "CREATURES", 2: ":3"},
-    "all-creatures-3":         {0: "ALL", 1: "CREATURES", 2: ":3"},
+    "creatures-3-yellow":      {1: "CREATURES", 2: "@colon3-fat.svg"},
+    "all-creatures-3":         {0: "ALL", 1: "CREATURES", 2: "@colon3-fat.svg"},
 }
 
 tt = TTFont(FONT)
@@ -85,6 +95,9 @@ def bounds(name):
     return bp.bounds
 
 
+STEM = (lambda b: (b[2] - b[0]) * scale)(bounds("I"))  # vertical stem width in flag units
+
+
 def ink_extent(run, tracking):
     x, first_l, last_r = 0, None, None
     for name, adv in run:
@@ -96,8 +109,8 @@ def ink_extent(run, tracking):
     return first_l, last_r
 
 
-def text_row(text):
-    """Return (path data, block start x) for a text row placed at baseline 0."""
+def layout(text):
+    """Return ([(glyph, x)], block start x) for a text row: glyph origins in flag units, baseline 0."""
     run = shape(text)
     if text in MEASURED:
         left, right, block_x = MEASURED[text]
@@ -110,12 +123,63 @@ def text_row(text):
         first_l, last_r = ink_extent(run, tracking)
         block_x = round(left + (last_r - first_l) * scale + DEFAULT_BLOCK_GAP)
 
-    pen = SVGPathPen(glyphs, ntos=lambda v: f"{v:.1f}".rstrip("0").rstrip("."))
-    x = -first_l
+    placed, x = [], -first_l
     for name, adv in run:
-        glyphs[name].draw(TransformPen(pen, (scale, 0, 0, -scale, left + x * scale, 0)))
+        placed.append((name, left + x * scale))
         x += adv + tracking
+    return placed, block_x
+
+
+def draw(placed, pen, matrix=Transform()):
+    for name, x in placed:
+        glyphs[name].draw(TransformPen(pen, matrix.transform((scale, 0, 0, -scale, x, 0))))
+
+
+def text_row(text):
+    """Return (path data, block start x) for a text row placed at baseline 0."""
+    placed, block_x = layout(text)
+    pen = SVGPathPen(glyphs, ntos=PATH_NTOS)
+    draw(placed, pen)
     return pen.getCommands(), block_x
+
+
+def tilted_row(spec, angle):
+    """Return (path data, matrix, stroke width) for text or a drawing ("@file.svg") over a full
+    stripe, rotated by angle degrees, scaled to fit inside the stripe with TILT_PAD around it,
+    left-aligned. Baseline 0. The stroke width (in path units) thickens drawn lines."""
+    if spec.startswith("@"):
+        src = open(os.path.join(OUT_DIR, spec[1:])).read()
+        d = re.search(r' d="([^"]+)"', src).group(1)
+        line = float(re.search(r'data-stroke-width="([^"]+)"', src).group(1))
+        vh = float(re.search(r'viewBox="([^"]+)"', src).group(1).split()[3])
+        ratio = STEM / STRIPE    # stem width relative to cap height, as in the font
+        extra = (ratio * vh - line) / (1 - ratio)
+        extra = extra if extra > 0.01 * vh else 0   # already fat enough (e.g. colon3-fat.svg)
+
+        def paint(pen, m):
+            parse_path(d, TransformPen(pen, m))
+    else:
+        placed, _ = layout(spec)
+        pen = SVGPathPen(glyphs, ntos=PATH_NTOS)
+        draw(placed, pen)
+        d, extra = pen.getCommands(), 0
+
+        def paint(pen, m):
+            draw(placed, pen, m)
+
+    def ink(m):
+        bp = BoundsPen(glyphs)
+        paint(bp, m)
+        return bp.bounds
+
+    x0, y0, x1, y1 = ink(Transform())
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    rot = Transform().rotate(math.radians(angle)).translate(-cx, -cy)
+    rx0, ry0, rx1, ry1 = ink(rot)
+    rx0, ry0, ry1 = rx0 - extra / 2, ry0 - extra / 2, ry1 + extra / 2
+    k = (STRIPE - 2 * TILT_PAD) / (ry1 - ry0)
+    m = Transform().translate(TILT_PAD - k * rx0, -STRIPE / 2 - k * (ry0 + ry1) / 2).scale(k).transform(rot)
+    return d, m, extra
 
 
 def build(rows, colors, overlay=""):
@@ -130,7 +194,15 @@ def build(rows, colors, overlay=""):
     ]
     for i, color in enumerate(ROW_COLORS):
         top = i * (STRIPE + GAP)
-        if i in rows:
+        if rows.get(i) in TILTED:
+            d, m, extra = tilted_row(rows[i], TILTED[rows[i]])
+            m = Transform().translate(0, top + STRIPE).transform(m)
+            stroke = (f' fill-rule="evenodd" stroke="{colors["dark"]}" stroke-width="{extra:.2f}"'
+                      ' stroke-linejoin="round"' if extra else "")
+            parts.append(f'  <rect class="{color}" y="{top}" width="{W}" height="{STRIPE}"/>')
+            parts.append(f'  <g opacity="{TILT_OPACITY}"><path class="dark"{stroke} '
+                         f'transform="matrix({" ".join(MATRIX_NTOS(v) for v in m)})" d="{d}"/></g>')
+        elif i in rows:
             d, block_x = text_row(rows[i])
             parts.append(f'  <rect class="{color}" x="{block_x}" y="{top}" width="{W - block_x}" height="{STRIPE}"/>')
             parts.append(f'  <path class="{color}" transform="translate(0 {top + STRIPE})" d="{d}"/>')
