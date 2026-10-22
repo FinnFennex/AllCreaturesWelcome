@@ -55,6 +55,7 @@ Written files:
 | `all-creatures-3-pride.svg`           | ALL / CREATURES, hand-drawn :3 over the yellow stripe |
 | `all-creatures-3-pride-paw.svg`       | as above, plus the outlined pawprint                 |
 | `all-creatures-3-pride-paw-solid.svg` | as above, plus the solid pawprint                    |
+| `all-creatures-are-beautiful-pride.svg` | ALL / CREATURES / ARE / BEAUTIFUL                  |
 
 ### PNG previews
 
