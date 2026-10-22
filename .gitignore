@@ -1,0 +1,9 @@
+fonts/
+
+# generated, not distributed
+all-creatures-welcome.*
+all-creatures-3.*
+all-creatures-are-beautiful.*
+creatures*.svg
+creatures*.png
+montage*.png
