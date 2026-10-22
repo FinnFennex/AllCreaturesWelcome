@@ -63,6 +63,7 @@ VARIANTS = {
     "creatures-3":             {1: "CREATURES :3"},
     "creatures-3-yellow":      {1: "CREATURES", 2: ":3"},
     "all-creatures-3":         {0: "ALL", 1: "CREATURES", 2: ":3"},
+    "all-creatures-are-beautiful": {0: "ALL", 1: "CREATURES", 2: "ARE", 3: "BEAUTIFUL"},
 }
 
 tt = TTFont(FONT)
