@@ -75,6 +75,16 @@ VARIANTS = {
     "all-creatures-are-beautiful": {0: "ALL", 1: "CREATURES", 2: "ARE", 3: "BEAUTIFUL"},
 }
 
+# print stickers in mm: page incl. bleed, safety margin from the page edge;
+# the stripes fill the safe area, the bars are stretched to fit
+STICKER_W, STICKER_H, STICKER_MARGIN = 87, 57, 4  # 85 x 55 mm landscape + 1 mm bleed
+STICKERS = {
+    "all-creatures-welcome-pride": (VARIANTS["all-creatures-welcome"], PRIDE_COLORS, ROW_COLORS),
+    "all-creatures-3-pride":       (VARIANTS["all-creatures-3"], PRIDE_COLORS, ROW_COLORS),
+    "all-creatures-are-beautiful-pride": (VARIANTS["all-creatures-are-beautiful"], PRIDE_COLORS, ROW_COLORS),
+    "all-femboys-3":               ({0: "ALL", 1: "FEMBOYS", 2: ":3"}, FEMBOY_COLORS, FEMBOY_ROW_COLORS),
+}
+
 tt = TTFont(FONT)
 glyphs = tt.getGlyphSet()
 hb_font = hb.Font(hb.Face(hb.Blob.from_file_path(FONT)))
@@ -128,25 +138,38 @@ def text_row(text):
     return pen.getCommands(), block_x
 
 
-def build(rows, colors, overlay="", row_colors=ROW_COLORS):
+def build(rows, colors, overlay="", row_colors=ROW_COLORS, sticker=False):
     H = len(row_colors) * STRIPE + (len(row_colors) - 1) * GAP
+    W_ = W
+    if sticker:
+        u = H / (STICKER_H - 2 * STICKER_MARGIN)  # units per mm
+        W_ = round(u * (STICKER_W - 2 * STICKER_MARGIN))
+        m, pw, ph = (round(v * u, 1) for v in (STICKER_MARGIN, STICKER_W, STICKER_H))
+        svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{-m} {-m} {pw} {ph}" '
+               f'width="{STICKER_W}mm" height="{STICKER_H}mm">')
+        background = f'  <rect class="dark" x="{-m}" y="{-m}" width="{pw}" height="{ph}"/>'
+        group = "  <g>"
+    else:
+        svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W + 2 * BORDER} {H + 2 * BORDER}" '
+               f'width="{W + 2 * BORDER}" height="{H + 2 * BORDER}">')
+        background = f'  <rect class="dark" width="{W + 2 * BORDER}" height="{H + 2 * BORDER}"/>'
+        group = f'  <g transform="translate({BORDER} {BORDER})">'
     parts = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W + 2 * BORDER} {H + 2 * BORDER}" '
-        f'width="{W + 2 * BORDER}" height="{H + 2 * BORDER}">',
+        svg,
         "  <title>All Creatures Welcome</title>",
         "  <!-- Text: Archivo Regular (SIL OFL), converted to outlines -->",
         "  <style>" + " ".join(f".{k}{{fill:{v}}}" for k, v in colors.items()) + "</style>",
-        f'  <rect class="dark" width="{W + 2 * BORDER}" height="{H + 2 * BORDER}"/>',
-        f'  <g transform="translate({BORDER} {BORDER})">',
+        background,
+        group,
     ]
     for i, color in enumerate(row_colors):
         top = i * (STRIPE + GAP)
         if i in rows:
             d, block_x = text_row(rows[i])
-            parts.append(f'  <rect class="{color}" x="{block_x}" y="{top}" width="{W - block_x}" height="{STRIPE}"/>')
+            parts.append(f'  <rect class="{color}" x="{block_x}" y="{top}" width="{W_ - block_x}" height="{STRIPE}"/>')
             parts.append(f'  <path class="{color}" transform="translate(0 {top + STRIPE})" d="{d}"/>')
         else:
-            parts.append(f'  <rect class="{color}" y="{top}" width="{W}" height="{STRIPE}"/>')
+            parts.append(f'  <rect class="{color}" y="{top}" width="{W_}" height="{STRIPE}"/>')
     parts.append("  </g>")
     if overlay:
         parts.append(f"  {overlay}")
@@ -175,3 +198,9 @@ out = os.path.join(OUT_DIR, "all-femboys-3.svg")
 with open(out, "w") as fh:
     fh.write(build({0: "ALL", 1: "FEMBOYS", 2: ":3"}, FEMBOY_COLORS, row_colors=FEMBOY_ROW_COLORS))
 print("wrote", out)
+
+for name, (rows, colors, row_colors) in STICKERS.items():
+    out = os.path.join(OUT_DIR, f"sticker-{name}.svg")
+    with open(out, "w") as fh:
+        fh.write(build(rows, colors, row_colors=row_colors, sticker=True))
+    print("wrote", out)

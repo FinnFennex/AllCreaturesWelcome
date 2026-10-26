@@ -68,6 +68,21 @@ for f in glob.glob('*-pride*.svg'):
 montage $(ls *-pride*.png | grep -v '^montage') -tile 2x -geometry 900x474+12+12 -background white montage-pride.png
 ```
 
+### Print stickers
+
+`make_flag_svg.py` also writes `sticker-*.svg` for the variants in `STICKERS`: 85 × 55 mm
+landscape plus 1 mm bleed (87 × 57 mm page), with the stripes inside a 4 mm safety margin
+(FLYERALARM sticker 5,5 × 8,5 cm, ordered as *Querformat*).
+
+Convert them to CMYK print PDFs with trim and bleed box:
+
+```bash
+pip install cairosvg pypdf   # plus ghostscript: sudo apt install ghostscript
+python3 make_print_pdf.py ISOcoated_v2_300_eci.icc 1 sticker-*.svg
+```
+
+The ICC profile is part of the [ECI offset profiles](https://www.eci.org/doku.php?id=en:downloads).
+
 ### Settings in `make_flag_svg.py`
 
 | Setting                        | Meaning                                                       |
@@ -78,6 +93,7 @@ montage $(ls *-pride*.png | grep -v '^montage') -tile 2x -geometry 900x474+12+12
 | `PALETTES`                     | which colour sets are written, mapped to their file suffix    |
 | `MEASURED`                     | placement of ALL / CREATURES / WELCOME as measured on the original flag |
 | `DEFAULT_LEFT`, `DEFAULT_TRACKING`, `DEFAULT_BLOCK_GAP` | placement of any other text |
+| `STICKER_W`, `STICKER_H`, `STICKER_MARGIN`, `STICKERS` | sticker page size incl. bleed, safety margin (mm) and which stickers are written |
 | `VARIANTS`                     | file name → text per row (0 = red … 5 = violet); rows without text are full stripes |
 
 To make a new variant, add a line to `VARIANTS`, e.g.
