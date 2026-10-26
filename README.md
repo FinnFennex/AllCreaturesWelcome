@@ -52,6 +52,7 @@ this repo; the others are listed in `.gitignore`.
 | `all-creatures-3-pride-paw.svg`         | as above, plus the outlined pawprint       |
 | `all-creatures-3-pride-paw-solid.svg`   | as above, plus the solid pawprint          |
 | `all-creatures-are-beautiful-pride.svg` | ALL / CREATURES / ARE / BEAUTIFUL          |
+| `all-femboys-3.svg`                     | ALL / FEMBOYS / :3 on the 7-stripe femboy flag |
 | `creatures-pride.svg`                   | CREATURES only (not committed)             |
 | `creatures-3-pride.svg`                 | CREATURES :3 on the orange row (not committed) |
 | `creatures-3-yellow-pride.svg`          | CREATURES, :3 on the yellow row (not committed) |
@@ -73,6 +74,7 @@ montage $(ls *-pride*.png | grep -v '^montage') -tile 2x -geometry 900x474+12+12
 |--------------------------------|---------------------------------------------------------------|
 | `W`, `STRIPE`, `GAP`, `BORDER` | artwork width, stripe height (= cap height), separator, frame |
 | `COLORS`, `PRIDE_COLORS`       | original and pride colours                                    |
+| `FEMBOY_COLORS`, `FEMBOY_ROW_COLORS` | femboy flag colours and stripe order                |
 | `PALETTES`                     | which colour sets are written, mapped to their file suffix    |
 | `MEASURED`                     | placement of ALL / CREATURES / WELCOME as measured on the original flag |
 | `DEFAULT_LEFT`, `DEFAULT_TRACKING`, `DEFAULT_BLOCK_GAP` | placement of any other text |

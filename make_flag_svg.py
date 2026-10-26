@@ -21,7 +21,6 @@ FONT, OUT_DIR = sys.argv[1], sys.argv[2]
 W = 3575            # artwork width
 STRIPE = 290        # stripe height = cap height
 GAP = 24            # dark separator between stripes
-H = 6 * STRIPE + 5 * GAP
 BORDER = GAP       # dark frame around the stripes
 
 COLORS = {
@@ -45,6 +44,16 @@ PRIDE_COLORS = {
 }
 PALETTES = {"": COLORS, "-pride": PRIDE_COLORS}
 ROW_COLORS = ["red", "orange", "yellow", "green", "blue", "pink"]
+
+# femboy flag, 7 stripes
+FEMBOY_COLORS = {
+    "dark":      COLORS["dark"],
+    "violet":    "#d460a7",
+    "pink":      "#e4adcd",
+    "white":     "#ffffff",
+    "lightblue": "#57cef8",
+}
+FEMBOY_ROW_COLORS = ["violet", "pink", "white", "lightblue", "white", "pink", "violet"]
 
 # placement measured on the original flag: ink left, ink right, block start
 MEASURED = {
@@ -119,7 +128,8 @@ def text_row(text):
     return pen.getCommands(), block_x
 
 
-def build(rows, colors, overlay=""):
+def build(rows, colors, overlay="", row_colors=ROW_COLORS):
+    H = len(row_colors) * STRIPE + (len(row_colors) - 1) * GAP
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W + 2 * BORDER} {H + 2 * BORDER}" '
         f'width="{W + 2 * BORDER}" height="{H + 2 * BORDER}">',
@@ -129,7 +139,7 @@ def build(rows, colors, overlay=""):
         f'  <rect class="dark" width="{W + 2 * BORDER}" height="{H + 2 * BORDER}"/>',
         f'  <g transform="translate({BORDER} {BORDER})">',
     ]
-    for i, color in enumerate(ROW_COLORS):
+    for i, color in enumerate(row_colors):
         top = i * (STRIPE + GAP)
         if i in rows:
             d, block_x = text_row(rows[i])
@@ -160,3 +170,8 @@ for paw_name, suffix in [("pawprint.svg", "-paw"), ("pawprint-solid.svg", "-paw-
         with open(out, "w") as fh:
             fh.write(build(VARIANTS["all-creatures-3"], PRIDE_COLORS, paw))
         print("wrote", out)
+
+out = os.path.join(OUT_DIR, "all-femboys-3.svg")
+with open(out, "w") as fh:
+    fh.write(build({0: "ALL", 1: "FEMBOYS", 2: ":3"}, FEMBOY_COLORS, row_colors=FEMBOY_ROW_COLORS))
+print("wrote", out)
